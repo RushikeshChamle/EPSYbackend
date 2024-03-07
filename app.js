@@ -1,6 +1,10 @@
 const express = require("express");
 const mysql = require("mysql");
 const app = express();
+const bcrypt = require("bcrypt"); // Add this line
+const bodyParser = require("body-parser");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 // MySQL Connection
 const connection = mysql.createConnection({
@@ -90,4 +94,98 @@ app.get("/replay/:sessionId", (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+// Signup API
+
+app.post("/signup", (req, res) => {
+  const { name, email, password, contact_no } = req.body;
+
+  const INSERT_USER_QUERY =
+    "INSERT INTO users (name, email, password, contact_no) VALUES (?, ?, ?, ?)";
+  connection.query(
+    INSERT_USER_QUERY,
+    [name, email, password, contact_no],
+    (err, results) => {
+      if (err) {
+        console.error("Error inserting user: " + err.stack);
+        res.status(500).json({ message: "Error inserting user" });
+        return;
+      }
+      console.log("Inserted a new user with ID: " + results.insertId);
+      res.status(201).json({ message: "User signed up successfully" });
+    }
+  );
+});
+
+// Sign-in / Authentication API -- HAshing
+// app.post("/login", async (req, res) => {
+//   const { email, password } = req.body;
+
+//   try {
+//     // Check if user exists
+//     const SELECT_USER_QUERY = "SELECT * FROM users WHERE email = ?";
+//     connection.query(SELECT_USER_QUERY, [email], async (err, results) => {
+//       if (err) {
+//         console.error("Error retrieving user:", err);
+//         return res.status(500).json({ message: "Internal server error" });
+//       }
+
+//       if (results.length === 0) {
+//         return res.status(401).json({ message: "Invalid email or password" });
+//       }
+
+//       // Retrieve user record
+//       const user = results[0];
+
+//       // Compare plain-text password with hashed password
+//       if (password === user.password) {
+//         // Passwords match, generate JWT token
+//         const secretKey = crypto.randomBytes(32).toString("hex");
+//         const token = jwt.sign({ userId: user.id }, secretKey, {
+//           expiresIn: "1h",
+//         });
+//         return res.status(200).json({ message: "Login successful", token });
+//       } else {
+//         // Passwords don't match
+//         return res.status(401).json({ message: "Invalid email or password" });
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Error:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// });
+
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+
+  console.log("Attempting to sign in with email:", email);
+
+  // Retrieve user from the database based on the email
+  const SELECT_USER_QUERY = "SELECT * FROM users WHERE email = ?";
+  connection.query(SELECT_USER_QUERY, [email], (err, results) => {
+    if (err) {
+      console.error("Error retrieving user:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
+    console.log("Fetched user data from the database:", results);
+
+    if (results.length === 0) {
+      console.log("User not found with email:", email);
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const user = results[0];
+
+    // Compare the plain-text password with the password retrieved from the database
+    if (password === user.password) {
+      // Passwords match, authentication successful
+      res.status(200).json({ message: "Login successful" });
+    } else {
+      // Passwords don't match
+      res.status(401).json({ message: "Invalid email or password" });
+    }
+  });
 });
