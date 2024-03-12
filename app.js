@@ -167,14 +167,20 @@ function verifyToken(req, res, next) {
   const token = req.headers["authorization"];
 
   if (!token) {
+    console.log("Token not provided");
+    res.setHeader("Content-Type", "application/json"); // Add this line
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
     const decoded = jwt.decode(token, "your_secret_key");
+    console.log("Token decoded successfully:", decoded);
+
     req.user = decoded;
     next();
   } catch (error) {
+    console.error("Error decoding token:", error);
+    res.setHeader("Content-Type", "application/json"); // Add this line
     return res.status(401).json({ message: "Invalid token" });
   }
 }
@@ -189,15 +195,21 @@ app.get("/session", verifyToken, (req, res) => {
   connection.query(SELECT_USER_QUERY, [userId], (err, results) => {
     if (err) {
       console.error("Error retrieving user details:", err);
+      res.setHeader("Content-Type", "application/json"); // Add this line
       return res.status(500).json({ message: "Internal server error" });
     }
 
     if (results.length === 0) {
+      console.log("User not found with ID:", userId);
+      res.setHeader("Content-Type", "application/json"); // Add this line
       return res.status(404).json({ message: "User not found" });
     }
 
     const user = results[0];
+
+    console.log("Session user details:", user); // Log session response
     // Respond with user details
+    res.setHeader("Content-Type", "application/json"); // Add this line
     res.json(user);
   });
 });
