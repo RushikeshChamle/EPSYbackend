@@ -335,3 +335,49 @@ app.get("/session", verifyToken, (req, res) => {
     res.json(user);
   });
 });
+
+// Assuming you have already set up your Express app and database connection...
+
+// Route for creating an organization
+app.post("/organisations", (req, res) => {
+  const { name } = req.body;
+
+  // Insert organization into the database
+  const INSERT_ORG_QUERY =
+    "INSERT INTO Organisation (name, createdAt) VALUES (?, NOW())";
+  connection.query(INSERT_ORG_QUERY, [name], (err, results) => {
+    if (err) {
+      console.error("Error creating organization:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
+    const orgId = results.insertId;
+    res
+      .status(201)
+      .json({ message: "Organization created successfully", orgId });
+  });
+});
+
+// Route for creating a project
+app.post("/projects", (req, res) => {
+  const { orgId, name, ProjectKey } = req.body;
+
+  // Insert project into the database
+  const INSERT_PROJECT_QUERY =
+    "INSERT INTO Project (orgId, Name, ProjectKey, createdAt) VALUES (?, ?, ?, NOW())";
+  connection.query(
+    INSERT_PROJECT_QUERY,
+    [orgId, name, ProjectKey],
+    (err, results) => {
+      if (err) {
+        console.error("Error creating project:", err);
+        return res.status(500).json({ message: "Internal server error" });
+      }
+
+      const projectId = results.insertId;
+      res
+        .status(201)
+        .json({ message: "Project created successfully", projectId });
+    }
+  );
+});
