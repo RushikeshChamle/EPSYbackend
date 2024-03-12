@@ -2,7 +2,7 @@ const express = require("express");
 const mysql = require("mysql");
 const app = express();
 
-const jwt = require("jwt-simple");
+// const jwt = require("jwt-simple");
 // const bcrypt = require("bcrypt"); // Add this line
 const bodyParser = require("body-parser");
 // const jwt = require("jsonwebtoken");
@@ -227,6 +227,37 @@ app.post("/signup", (req, res) => {
 //   });
 // });
 
+// app.post("/login", (req, res) => {
+//   const { email, password } = req.body;
+
+//   // Retrieve user from the database based on the email
+//   const SELECT_USER_QUERY = "SELECT * FROM users WHERE email = ?";
+//   connection.query(SELECT_USER_QUERY, [email], (err, results) => {
+//     if (err) {
+//       console.error("Error retrieving user:", err);
+//       return res.status(500).json({ message: "Internal server error" });
+//     }
+
+//     if (results.length === 0) {
+//       return res.status(401).json({ message: "Invalid email or password" });
+//     }
+
+//     const user = results[0];
+
+//     // Compare the plain-text password with the password retrieved from the database
+//     if (password === user.password) {
+//       // Passwords match, generate JWT token
+//       const token = jwt.encode({ userId: user.id }, "your_secret_key", "HS256");
+
+//       res.status(200).json({ message: "Login successful", token });
+//     } else {
+//       // Passwords don't match
+//       res.status(401).json({ message: "Invalid email or password" });
+//     }
+//   });
+// });
+
+const jwt = require("jsonwebtoken");
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
@@ -247,9 +278,17 @@ app.post("/login", (req, res) => {
     // Compare the plain-text password with the password retrieved from the database
     if (password === user.password) {
       // Passwords match, generate JWT token
-      const token = jwt.encode({ userId: user.id }, "your_secret_key", "HS256");
+      const token = jwt.sign({ userId: user.id }, "your_secret_key", {
+        expiresIn: "1h",
+      });
 
-      res.status(200).json({ message: "Login successful", token });
+      // Include user data in the response
+      const userWithoutPassword = { ...user, password: undefined }; // Remove password from the user object
+      res.status(200).json({
+        message: "Login successful",
+        token,
+        user: userWithoutPassword,
+      });
     } else {
       // Passwords don't match
       res.status(401).json({ message: "Invalid email or password" });
