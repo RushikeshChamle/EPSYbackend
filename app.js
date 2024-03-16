@@ -282,4 +282,41 @@ app.get("/users/:userId", (req, res) => {
   });
 });
 
+app.get("/projects/:orgId", (req, res) => {
+  const orgId = req.params.orgId;
+  const SELECT_PROJECTS_QUERY = "SELECT * FROM Project WHERE orgId = ?";
+
+  connection.query(SELECT_PROJECTS_QUERY, [orgId], (err, results) => {
+    if (err) {
+      console.error("Error fetching projects:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    res.json(results);
+  });
+});
+
+// app.get("/projects/:orgId", (req, res) => {
+//   const orgId = req.params.orgId;
+//   const SELECT_PROJECTS_QUERY = "SELECT * FROM Project WHERE orgId = ?";
+
+//   connection.query(SELECT_PROJECTS_QUERY, [orgId], (err, results) => {
+//     if (err) {
+//       console.error("Error fetching projects:", err);
+//       return res.status(500).json({ error: "Internal server error" });
+//     }
+
+//     // Construct project objects
+//     const projects = results.map((project) => ({
+//       Id: project.id,
+//       ProjectKey: project.projectKey,
+//       orgId: project.orgId,
+//       Name: project.name,
+//       CreatedAt: project.createdDate,
+//     }));
+
+//     res.json(projects);
+//   });
+// });
+
 module.exports = app;
