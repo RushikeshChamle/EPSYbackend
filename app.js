@@ -319,4 +319,116 @@ app.get("/projects/:orgId", (req, res) => {
 //   });
 // });
 
+// Session data
+// app.get("/sessiondata/:userId", (req, res) => {
+//   const { userId } = req.params;
+
+//   // Query to fetch user, organization, and project details based on userId
+// const SELECT_SESSIONDATA_QUERY = `
+//   SELECT *
+//   FROM users
+//   RIGHT JOIN my_database.Organisation ON users.orgId = Organisation.Id
+//   RIGHT JOIN my_database.Project ON Organisation.Id = Project.orgId
+//   WHERE users.id = ?`;
+
+//   connection.query(SELECT_SESSIONDATA_QUERY, [userId], (err, results) => {
+//     if (err) {
+//       console.error("Error retrieving session data:", err);
+//       res.status(500).json({ message: "Internal server error" });
+//       return;
+//     }
+
+//     if (results.length === 0) {
+//       res.status(404).json({ message: "Session data not found" });
+//       return;
+//     }
+
+//     // Send the entire results array as the response
+//     res.status(200).json(results);
+//   });
+// });
+
+app.get("/sessiondata/:userId", (req, res) => {
+  const { userId } = req.params;
+
+  res.set("name", "sessiondata");
+
+  // Query to fetch user, organization, and project details based on userId
+  const SELECT_SESSIONDATA_QUERY = `
+    SELECT 
+      u.id AS UserId, 
+      u.name AS UserName, 
+      u.email AS UserEmail,
+      u.contact_no AS UserContactNo,
+      u.created_at AS UserCreatedAt,
+      o.Id AS OrgId, 
+      o.Name AS OrgName, 
+      o.Email AS OrgEmail,
+      o.CreatedAt AS OrgCreatedAt,
+      p.Id AS ProjectId, 
+      p.Name AS ProjectName, 
+      p.ProjectKey AS ProjectKey,
+      p.CreatedAt AS ProjectCreatedAt
+    FROM users u
+    RIGHT JOIN Organisation o ON u.orgId = o.Id
+    RIGHT JOIN Project p ON o.Id = p.orgId
+    WHERE u.id = ?`;
+
+  connection.query(SELECT_SESSIONDATA_QUERY, [userId], (err, results) => {
+    if (err) {
+      console.error("Error retrieving session data:", err);
+      res.status(500).json({ message: "Internal server error" });
+      return;
+    }
+
+    if (results.length === 0) {
+      res.status(404).json({ message: "Session data not found" });
+      return;
+    }
+
+    // Initialize arrays to store user, organization, and project data
+    const users = [];
+    const organizations = [];
+    const projects = [];
+
+    // Extract user, organization, and project data from the results
+    results.forEach((row) => {
+      const user = {
+        UserId: row.UserId,
+        UserName: row.UserName,
+        UserEmail: row.UserEmail,
+        UserContactNo: row.UserContactNo,
+        UserCreatedAt: row.UserCreatedAt,
+      };
+      users.push(user);
+
+      const organization = {
+        OrgId: row.OrgId,
+        OrgName: row.OrgName,
+        OrgEmail: row.OrgEmail,
+        OrgCreatedAt: row.OrgCreatedAt,
+      };
+      organizations.push(organization);
+
+      const project = {
+        ProjectId: row.ProjectId,
+        ProjectName: row.ProjectName,
+        ProjectKey: row.ProjectKey,
+        ProjectCreatedAt: row.ProjectCreatedAt,
+      };
+      projects.push(project);
+    });
+
+    // Construct the response object
+    const responseData = {
+      users: users,
+      organizations: organizations,
+      projects: projects,
+    };
+
+    // Send the response
+    res.status(200).json(responseData);
+  });
+});
+
 module.exports = app;
