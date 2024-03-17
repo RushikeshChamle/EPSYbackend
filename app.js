@@ -77,7 +77,8 @@ app.options("/record", (req, res) => {
 app.get("/replay/:sessionId", (req, res) => {
   const { sessionId } = req.params;
 
-  const SELECT_SESSION_QUERY = "SELECT session_data FROM sessions WHERE id = ?";
+  const SELECT_SESSION_QUERY =
+    "SELECT id, session_data, project_id  FROM sessions WHERE id = ?";
   connection.query(SELECT_SESSION_QUERY, [sessionId], (err, results) => {
     if (err) {
       console.error("Error retrieving session: " + err.stack);
@@ -91,6 +92,35 @@ app.get("/replay/:sessionId", (req, res) => {
     }
     const sessionData = JSON.parse(results[0].session_data);
     res.json(sessionData);
+  });
+});
+
+// Updated Fech Session with all fields
+
+app.get("/project/:projectId", (req, res) => {
+  const { projectId } = req.params;
+
+  const SELECT_SESSION_QUERY =
+    "SELECT id as session_id,  project_id FROM sessions WHERE project_id = ?";
+  connection.query(SELECT_SESSION_QUERY, [projectId], (err, results) => {
+    if (err) {
+      console.error("Error retrieving session: " + err.stack);
+      res.status(500).send("Error retrieving session");
+      return;
+    }
+
+    if (results.length === 0) {
+      res.status(404).send("Session not found");
+      return;
+    }
+
+    const project = results.map((result) => ({
+      session_id: result.session_id,
+
+      project_id: result.project_id,
+    }));
+
+    res.json(project);
   });
 });
 
