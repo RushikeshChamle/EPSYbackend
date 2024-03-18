@@ -54,19 +54,24 @@ app.post("/persons", (req, res) => {
 
 // Routes
 app.post("/record", (req, res) => {
-  const { events } = req.body;
+  const { project_id, events } = req.body; // Extract project_id from request body
   const sessionData = JSON.stringify(events);
 
-  const INSERT_SESSION_QUERY = "INSERT INTO sessions (session_data) VALUES (?)";
-  connection.query(INSERT_SESSION_QUERY, [sessionData], (err, results) => {
-    if (err) {
-      console.error("Error inserting session: " + err.stack);
-      res.status(500).send("Error inserting session");
-      return;
+  const INSERT_SESSION_QUERY =
+    "INSERT INTO sessions (project_id, session_data) VALUES (?, ?)";
+  connection.query(
+    INSERT_SESSION_QUERY,
+    [project_id, sessionData],
+    (err, results) => {
+      if (err) {
+        console.error("Error inserting session: " + err.stack);
+        res.status(500).send("Error inserting session");
+        return;
+      }
+      console.log("Inserted a new session with ID: " + results.insertId);
+      res.status(201).send("Session recorded successfully");
     }
-    console.log("Inserted a new session with ID: " + results.insertId);
-    res.status(201).send("Session recorded successfully");
-  });
+  );
 });
 
 // Handle OPTIONS requests for the /record endpoint
@@ -101,7 +106,7 @@ app.get("/project/:projectId", (req, res) => {
   const { projectId } = req.params;
 
   const SELECT_SESSION_QUERY =
-    "SELECT id as session_id,  project_id FROM sessions WHERE project_id = ?";
+    "SELECT id as session_id,  project_id , created_date FROM sessions WHERE project_id = ?";
   connection.query(SELECT_SESSION_QUERY, [projectId], (err, results) => {
     if (err) {
       console.error("Error retrieving session: " + err.stack);
@@ -116,8 +121,8 @@ app.get("/project/:projectId", (req, res) => {
 
     const project = results.map((result) => ({
       session_id: result.session_id,
-
       project_id: result.project_id,
+      created_date: result.created_date,
     }));
 
     res.json(project);
@@ -460,5 +465,109 @@ app.get("/sessiondata/:userId", (req, res) => {
     res.status(200).json(responseData);
   });
 });
+
+app.get("/sessiondata", verifyToken, (req, res) => {
+  const userId = req.user.userId; // Extract userId from the decoded JWT token
+
+  // Query to fetch user, organization, and project details based on userId
+  const SELECT_SESSIONDATA_QUERY = `
+    SELECT 
+      u.id AS UserId, 
+      u.name AS UserName, 
+      u.email AS UserEmail,
+      u.contact_no AS UserContactNo,
+      u.created_at AS UserCreatedAt,
+      o.Id AS OrgId, 
+      o.Name AS OrgName, 
+      o.Email AS OrgEmail,
+      o.CreatedAt AS OrgCreatedAt,
+      p.Id AS ProjectId, 
+      p.Name AS ProjectName, 
+      p.ProjectKey AS ProjectKey,
+      p.CreatedAt AS ProjectCreatedAt
+    FROM users u
+    RIGHT JOIN Organisation o ON u.orgId = o.Id
+    RIGHT JOIN Project p ON o.Id = p.orgId
+    WHERE u.id = ?`;
+
+  connection.query(SELECT_SESSIONDATA_QUERY, [userId], (err, results) => {
+    if (err) {
+      console.error("Error retrieving session data:", err);
+      res.status(500).json({ message: "Internal server error" });
+      return;
+    }
+
+    if (results.length === 0) {
+      res.status(404).json({ message: "Session data not found" });
+      return;
+    }
+
+    // Initialize arrays to store user, organization, and project data
+    const users = [];
+    const organizations = [];
+    const projects = [];
+
+    // Extract user, organization, and project data from the results
+    results.forEach((row) => {
+      const user = {
+        UserId: row.UserId,
+        UserName: row.UserName,
+        UserEmail: row.UserEmail,
+        UserContactNo: row.UserContactNo,
+        UserCreatedAt: row.UserCreatedAt,
+      };
+      users.push(user);
+
+      const organization = {
+        OrgId: row.OrgId,
+        OrgName: row.OrgName,
+        OrgEmail: row.OrgEmail,
+        OrgCreatedAt: row.OrgCreatedAt,
+      };
+      organizations.push(organization);
+
+      const project = {
+        ProjectId: row.ProjectId,
+        ProjectName: row.ProjectName,
+        ProjectKey: row.ProjectKey,
+        ProjectCreatedAt: row.ProjectCreatedAt,
+      };
+      projects.push(project);
+    });
+
+    // Construct the response object
+    const responseData = {
+      users: users,
+      organizations: organizations,
+      projects: projects,
+    };
+
+    // Send the response
+    res.status(200).json(responseData);
+  });
+});
+
+// Middleware function to verify token
+function verifyToken(req, res, next) {
+  const token = req.headers["authorization"];
+
+  if (!token) {
+    console.log("Token not provided");
+    res.setHeader("Content-Type", "application/json"); // Add this line
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, "your_secret_key"); // Verify the JWT token
+    console.log("Token decoded successfully:", decoded);
+
+    req.user = decoded; // Set the decoded user information in the request object
+    next();
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    res.setHeader("Content-Type", "application/json"); // Add this line
+    return res.status(401).json({ message: "Invalid token" });
+  }
+}
 
 module.exports = app;
