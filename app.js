@@ -136,24 +136,81 @@ app.listen(PORT, () => {
 
 // Signup API
 
-app.post("/signup", (req, res) => {
-  const { name, email, password, contact_no } = req.body;
+// app.post("/signup", (req, res) => {
+//   const { name, email, password, contact_no } = req.body;
 
-  const INSERT_USER_QUERY =
-    "INSERT INTO users (name, email, password, contact_no) VALUES (?, ?, ?, ?)";
-  connection.query(
-    INSERT_USER_QUERY,
-    [name, email, password, contact_no],
-    (err, results) => {
-      if (err) {
-        console.error("Error inserting user: " + err.stack);
-        res.status(500).json({ message: "Error inserting user" });
-        return;
-      }
-      console.log("Inserted a new user with ID: " + results.insertId);
-      res.status(201).json({ message: "User signed up successfully" });
+//   const INSERT_USER_QUERY =
+//     "INSERT INTO users (name, email, password, contact_no) VALUES (?, ?, ?, ?)";
+//   connection.query(
+//     INSERT_USER_QUERY,
+//     [name, email, password, contact_no],
+//     (err, results) => {
+//       if (err) {
+//         console.error("Error inserting user: " + err.stack);
+//         res.status(500).json({ message: "Error inserting user" });
+//         return;
+//       }
+//       console.log("Inserted a new user with ID: " + results.insertId);
+//       res.status(201).json({ message: "User signed up successfully" });
+//     }
+//   );
+// });
+
+// newlogic for the signup by which the user + Organisation + Project (name as OrgNAme) will be added
+
+// Signup API
+app.post("/signup", (req, res) => {
+  const { name, email, password, contact_no, org_name, size } = req.body;
+
+  // First, insert the organization into the database
+  const INSERT_ORG_QUERY =
+    "INSERT INTO Organisation (name, size, createdAt) VALUES (?, ?, NOW())"; // Adjusted to use "Name" and "size" columns
+  connection.query(INSERT_ORG_QUERY, [org_name, size], (err, orgResult) => {
+    if (err) {
+      console.error("Error creating organization: " + err.stack);
+      res.status(500).json({ message: "Error creating organization" });
+      return;
     }
-  );
+    console.log("Inserted a new organization with ID: " + orgResult.insertId);
+
+    // Then, use the inserted organization's ID to create the project
+    const INSERT_PROJECT_QUERY =
+      "INSERT INTO Project (orgId, Name, createdAt) VALUES (?, ?, NOW())";
+    connection.query(
+      INSERT_PROJECT_QUERY,
+      [orgResult.insertId, org_name], // Use the organization ID as the foreign key and org_name as the project name
+      (err, projectResult) => {
+        if (err) {
+          console.error("Error creating project: " + err.stack);
+          res.status(500).json({ message: "Error creating project" });
+          return;
+        }
+        console.log(
+          "Inserted a new project with ID: " + projectResult.insertId
+        );
+
+        // Finally, use the inserted organization's ID to create the user
+        const INSERT_USER_QUERY =
+          "INSERT INTO users (name, email, password, contact_no, orgId) VALUES (?, ?, ?, ?, ?)";
+        connection.query(
+          INSERT_USER_QUERY,
+          [name, email, password, contact_no, orgResult.insertId],
+          (err, userResult) => {
+            if (err) {
+              console.error("Error inserting user: " + err.stack);
+              res.status(500).json({ message: "Error inserting user" });
+              return;
+            }
+            console.log("Inserted a new user with ID: " + userResult.insertId);
+            res.status(201).json({
+              message:
+                "User signed up successfully, organization and project created",
+            });
+          }
+        );
+      }
+    );
+  });
 });
 
 //Login API
