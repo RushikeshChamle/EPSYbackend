@@ -521,6 +521,32 @@ app.get("/sessiondata/:userId", (req, res) => {
     // Send the response
     res.status(200).json(responseData);
   });
+  console.log(responseData);
+});
+
+app.post("/events", (req, res) => {
+  const eventData = req.body;
+
+  // Insert event data into the database
+  const query =
+    "INSERT INTO events (project_id, event_name, event_properties) VALUES (?, ?, ?)";
+  const values = [
+    eventData.project_id,
+    eventData.event_name,
+    JSON.stringify(eventData.event_properties),
+  ];
+
+  connection.query(query, values, (err, result) => {
+    if (err) {
+      console.error("Error inserting event data into database:", err);
+      res.status(500).json({ error: "Internal server error" });
+      return;
+    }
+    console.log("Event data inserted into database:", result);
+    res
+      .status(200)
+      .json({ message: "Event data received and stored successfully" });
+  });
 });
 
 app.get("/sessiondata", verifyToken, (req, res) => {
