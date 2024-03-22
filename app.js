@@ -521,7 +521,6 @@ app.get("/sessiondata/:userId", (req, res) => {
     // Send the response
     res.status(200).json(responseData);
   });
-  console.log(responseData);
 });
 
 app.post("/events", (req, res) => {
