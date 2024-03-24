@@ -523,6 +523,7 @@ app.get("/sessiondata/:userId", (req, res) => {
   });
 });
 
+// Adding events
 app.post("/events", (req, res) => {
   const eventData = req.body;
 
@@ -547,6 +548,33 @@ app.post("/events", (req, res) => {
       .json({ message: "Event data received and stored successfully" });
   });
 });
+
+// fetching events
+
+app.get("/getevents", (req, res) => {
+  const projectId = req.query.projectId;
+
+  // Check if projectId is provided
+  if (!projectId) {
+    return res.status(400).json({ error: "Project ID is required" });
+  }
+
+  // Retrieve events from the database based on project ID
+  const query = "SELECT * FROM events WHERE project_id = ?";
+
+  connection.query(query, [projectId], (err, results) => {
+    if (err) {
+      console.error("Error retrieving events from database:", err);
+      res.status(500).json({ error: "Internal server error" });
+      return;
+    }
+
+    console.log("Events retrieved from database:", results);
+    res.status(200).json(results);
+  });
+});
+
+// Session data fetching API
 
 app.get("/sessiondata", verifyToken, (req, res) => {
   const userId = req.user.userId; // Extract userId from the decoded JWT token
